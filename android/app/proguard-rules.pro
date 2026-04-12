@@ -1,0 +1,4 @@
+-keep class io.ktor.** { *; }
+-keep class kotlinx.serialization.** { *; }
+-dontwarn io.netty.**
+-dontwarn org.slf4j.**

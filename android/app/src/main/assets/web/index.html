@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Reverb</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+  <!-- 상태바 -->
+  <header id="status-bar">
+    <div id="status-left">
+      <div id="connection-dot" class="dot offline"></div>
+      <span id="device-name">연결 대기 중...</span>
+    </div>
+    <div id="status-right">
+      <span id="battery-text"></span>
+      <button id="btn-filter" onclick="toggleFilter()" title="필터 설정">⚙️</button>
+    </div>
+  </header>
+
+  <!-- 필터 패널 (사이드바) -->
+  <aside id="filter-panel" class="hidden">
+    <h3>앱 필터</h3>
+    <div id="filter-mode">
+      <label>
+        <input type="radio" name="mode" value="blacklist" onchange="setFilterMode('blacklist')">
+        차단 목록 모드
+      </label>
+      <label>
+        <input type="radio" name="mode" value="whitelist" onchange="setFilterMode('whitelist')">
+        허용 목록 모드
+      </label>
+    </div>
+    <div id="filter-packages"></div>
+    <button class="btn-secondary" onclick="toggleFilter()">닫기</button>
+  </aside>
+
+  <!-- 메인 알림 피드 -->
+  <main id="notifications">
+    <div id="empty-state">
+      <p>📵</p>
+      <p>아직 알림이 없습니다</p>
+      <p class="hint">Android 폰에서 알림이 오면 여기에 표시됩니다</p>
+    </div>
+  </main>
+
+  <!-- 답장 모달 -->
+  <dialog id="reply-modal">
+    <div class="modal-header">
+      <span id="modal-sender"></span>
+      <span id="modal-app" class="modal-app-label"></span>
+    </div>
+    <textarea
+      id="reply-textarea"
+      placeholder="답장을 입력하세요..."
+      rows="3"
+      autofocus></textarea>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeReplyModal()">취소</button>
+      <button class="btn-send" id="btn-send" onclick="sendReply()">보내기</button>
+    </div>
+  </dialog>
+
+  <!-- 토스트 알림 -->
+  <div id="toast"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

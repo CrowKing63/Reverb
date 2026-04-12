@@ -169,8 +169,8 @@ function onStatus(data) {
 // ── 카드 빌더 (Stitch UI 구조 연동) ────────────────────────────────────────────────────
 function buildCard(n) {
   const card = document.createElement('div');
-  // 기본 스타일: 카드 폭 고정, 내용 줄 바꿈
-  card.className = `glass-pane p-5 rounded-2xl border border-white/5 cursor-pointer transition-all hover:bg-white/5 mb-3 overflow-hidden`;
+  // 카드 스타일: overflow-hidden 제거하여 패딩 정상 작동
+  card.className = `glass-pane p-5 rounded-2xl border border-white/5 cursor-pointer transition-all hover:bg-white/5 mb-3`;
   card.dataset.id = n.id;
 
   const time = formatTime(n.timestamp);
@@ -184,10 +184,10 @@ function buildCard(n) {
         </div>
         <div class="flex-1 min-w-0">
             <div class="flex justify-between items-start mb-1 gap-2">
-                <h3 class="font-bold text-on-surface text-sm break-words whitespace-normal">${escHtml(n.title || n.appLabel || n.packageName)}</h3>
+                <h3 class="font-bold text-on-surface text-sm card-title">${escHtml(n.title || n.appLabel || n.packageName)}</h3>
                 <span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest flex-shrink-0">${time}</span>
             </div>
-            <p class="text-xs text-on-surface-variant break-words whitespace-normal">${escHtml(n.body || '')}</p>
+            <p class="text-xs text-on-surface-variant card-body">${escHtml(n.body || '')}</p>
         </div>
     </div>
   `;

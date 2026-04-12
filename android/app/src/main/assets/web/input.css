@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .notification-card {
+    @apply glass-pane p-4 rounded-2xl border border-white/5 shadow-lg cursor-pointer transition-all hover:bg-white/5 mb-3 flex items-center gap-4;
+  }
+  .notification-card.active {
+    @apply border-2 border-primary/40;
+  }
+  .notification-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0;
+  }
+  .card-app-label { @apply text-[10px] font-bold text-primary uppercase tracking-widest; }
+  .card-time { @apply text-[10px] text-on-surface-variant font-medium uppercase tracking-widest flex-shrink-0; }
+  .card-title { @apply font-bold truncate text-on-surface text-sm; }
+  .card-body { @apply text-xs text-on-surface-variant truncate; }
+
+  /* Empty State */
+  #empty-state { @apply flex flex-col items-center justify-center p-12 text-center text-on-surface-variant gap-3 mt-10; }
+  #empty-state .empty-icon { @apply text-6xl mb-2 grayscale opacity-40; }
+  #empty-state .empty-title { @apply text-lg font-bold text-on-surface; }
+  #empty-state .hint { @apply text-xs uppercase tracking-widest mt-2 opacity-70; }
+
+  /* Status Dot */
+  .dot { @apply w-2 h-2 rounded-full shadow-lg transition-colors flex-shrink-0; }
+  .dot.online { @apply bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]; }
+  .dot.offline { @apply bg-red-400 shadow-[0_0_8px_rgba(248,113,113,0.8)]; }
+
+  /* Toast */
+  #toast {
+    @apply fixed bottom-8 left-1/2 -translate-x-1/2 bg-surface-container-high text-on-surface border border-white/10 px-6 py-3 rounded-full text-sm font-medium shadow-2xl opacity-0 transition-opacity pointer-events-none z-50;
+  }
+  #toast.show { @apply opacity-100; }
+
+  /* Filter Panel */
+  #filter-panel {
+    @apply fixed top-0 right-0 w-80 h-full glass-pane border-l border-white/10 p-6 z-50 flex flex-col transition-transform duration-300;
+  }
+  #filter-panel.hidden { @apply translate-x-full; }
+  .filter-pkg-item { @apply flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-xl text-sm mb-2; }
+}
+
+body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+.glass-pane { background: rgba(25, 25, 28, 0.4); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); }
+.custom-scrollbar::-webkit-scrollbar { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }

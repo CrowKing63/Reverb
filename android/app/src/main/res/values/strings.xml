@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <string name="app_name">Reverb</string>
-    <string name="service_label">Reverb 알림 브리지</string>
-</resources>

@@ -1,0 +1,129 @@
+# Built application files
+*.apk
+*.aar
+*.ap_
+*.aab
+
+# Files for the ART/Dalvik VM
+*.dex
+
+# Java class files
+*.class
+
+# Generated files (binaries, generated source, etc.)
+/gen/
+/generated/
+
+# Gradle files
+.gradle/
+build/
+*/build/
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+.idea caches/
+
+# Android Studio
+captures/
+.externalNativeBuild
+.cxx
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# User-specific configurations
+*.swp
+*.swo
+*~
+
+# Kotlin
+*.kotlin_metadata
+kotlinc/
+
+# Android Profiling
+*.hprof
+
+# Crashlytics
+fabric/
+crashlytics-build.properties
+crashlytics.properties
+
+# Lint
+lint/
+lint-results.xml
+lint-report/
+
+# ProGuard
+proguard/
+outputs/mapping/
+
+# Keystore files
+*.jks
+*.keystore
+*.key
+
+# Google Services (e.g. Maps or AdMob)
+google-services.json
+
+# Build cache
+.cxx/
+*.so
+*.dylib
+
+# Gradle
+gradle-app.state
+gradle-settings-app.state
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# NDK
+obj/
+android/app/.cxx/
+android/app/.externalNativeBuild/
+
+# Firebase
+app/google-services.json
+
+# Android Studio workspace
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/libraries/
+.idea/modules.xml
+.idea/navEditor.xml
+
+# Android Profiling
+*.hprof
+
+# Misc
+*.orig
+*.rej
+*.pyc
+*.pyo
+
+# Node modules (if using any JS tooling)
+node_modules/
+
+# Tailwind CSS build artifacts (if generated)
+android/app/src/main/assets/web/input.css
+android/app/src/main/assets/web/tailwind.css
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Desktop.ini

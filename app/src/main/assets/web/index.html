@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html class="dark" lang="ko">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Reverb - Notification Center</title>
+
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="/style.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+    rel="stylesheet" />
+
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 10px;
+    }
+  </style>
+
+
+</head>
+
+<body class="bg-surface text-on-surface h-screen overflow-hidden flex flex-col">
+  <!-- Abstract Background -->
+  <div class="fixed inset-0 z-0 pointer-events-none">
+    <div class="absolute inset-0 bg-gradient-to-br from-surface to-surface-container-low"></div>
+    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]"></div>
+    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/5 blur-[100px]"></div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="relative z-20 flex justify-between items-center px-8 py-4 opacity-70">
+    <div class="flex items-center gap-4">
+      <div id="connection-dot" class="dot offline"></div>
+      <div id="device-name"
+        class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-[10px] uppercase font-bold tracking-widest text-primary">
+        연결 대기 중...
+      </div>
+    </div>
+    <div class="flex items-center gap-4">
+      <button id="btn-test" onclick="sendTestNotification()" title="테스트 알림 전송"
+        class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1 text-xs font-medium">
+        <span class="material-symbols-outlined text-sm">bug_report</span>
+        <span class="hidden md:inline">테스트</span>
+      </button>
+      <span class="material-symbols-outlined text-sm">wifi</span>
+      <span id="battery-text" class="text-sm font-medium"></span>
+      <button id="btn-filter" onclick="toggleFilter()" title="필터 설정"
+        class="text-on-surface-variant hover:text-on-surface transition-colors ml-2">
+        <span class="material-symbols-outlined text-sm">settings</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Panel -->
+  <aside id="filter-panel" class="hidden">
+    <div class="flex items-center justify-between mb-6">
+      <h3 class="text-xl font-bold">App Filters</h3>
+      <button onclick="toggleFilter()" class="text-on-surface-variant hover:text-on-surface">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div id="filter-mode" class="flex flex-col gap-3 bg-white/5 p-4 rounded-2xl mb-4 border border-white/5">
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input type="radio" name="mode" value="blacklist" onchange="setFilterMode('blacklist')"
+          class="text-primary focus:ring-primary/50 bg-surface border-white/20">
+        <span class="text-sm">차단 목록 (Blacklist)</span>
+      </label>
+      <label class="flex items-center gap-3 cursor-pointer">
+        <input type="radio" name="mode" value="whitelist" onchange="setFilterMode('whitelist')"
+          class="text-primary focus:ring-primary/50 bg-surface border-white/20">
+        <span class="text-sm">허용 목록 (Whitelist)</span>
+      </label>
+    </div>
+    <div id="filter-packages" class="flex-1 overflow-y-auto custom-scrollbar"></div>
+  </aside>
+
+  <!-- Main View -->
+  <div class="relative z-10 flex-1 flex flex-col lg:flex-row w-full h-full overflow-hidden">
+    <!-- Left Pane: Notification List -->
+    <div class="w-full lg:w-[440px] flex-shrink-0 flex flex-col h-full px-6 lg:px-8 py-4">
+      <h1 class="text-3xl font-bold tracking-tight mb-6 flex-shrink-0">Stream</h1>
+      <div id="notifications" class="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar space-y-3 pb-10">
+        <div id="empty-state"
+          class="flex flex-col items-center justify-center h-full text-center text-on-surface-variant opacity-60 gap-4 mt-20">
+          <span class="material-symbols-outlined text-6xl opacity-40">phonelink_ring</span>
+          <p class="text-lg font-bold">아직 알림이 없습니다</p>
+          <p class="text-xs uppercase tracking-widest mt-2">Android 폰에서 알림이 오면 표시됩니다</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Divider -->
+    <div class="hidden lg:block w-px bg-white/10 flex-shrink-0 self-stretch"></div>
+
+    <!-- Right Pane: Notification Detail -->
+    <div class="hidden lg:flex flex-1 flex-col h-full overflow-hidden px-4 lg:px-8 py-4 min-w-0">
+      <div
+        class="glass-pane rounded-3xl border border-white/10 shadow-2xl flex flex-col h-full overflow-hidden relative">
+
+        <!-- Welcome / Empty State (Shown initially) -->
+        <div id="right-pane-empty"
+          class="absolute inset-0 flex flex-col items-center justify-center text-on-surface-variant gap-4 bg-surface-container-high/30 z-10">
+          <span class="material-symbols-outlined text-6xl opacity-20">forum</span>
+          <p class="text-sm font-medium tracking-wide uppercase opacity-50">알림을 선택하면 상세 내용이 표시됩니다</p>
+        </div>
+
+        <!-- Detail Content (Shown on click) -->
+        <div id="right-pane-content" class="flex flex-col h-full hidden overflow-hidden">
+          <!-- Message Header -->
+          <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-4 overflow-hidden">
+              <div
+                class="w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center shadow-lg flex-shrink-0">
+                <span class="material-symbols-outlined text-2xl text-on-secondary-container">notifications_active</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <h2 id="detail-sender" class="text-xl font-bold text-on-surface truncate"></h2>
+                <p id="detail-app" class="text-xs font-medium text-secondary uppercase tracking-widest mt-1 truncate">
+                </p>
+              </div>
+            </div>
+            <button class="p-3 rounded-full hover:bg-white/5 text-on-surface-variant transition-colors flex-shrink-0"
+              onclick="document.getElementById('right-pane-empty').classList.remove('hidden'); document.getElementById('right-pane-content').classList.add('hidden');">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+
+          <!-- Message Content -->
+          <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+            <div class="flex flex-col gap-6">
+              <div class="flex flex-col items-start max-w-full">
+                <div
+                  class="bg-surface-container-high rounded-t-2xl rounded-br-2xl p-6 shadow-sm border border-white/5 w-full max-w-[85%]">
+                  <p id="detail-text" class="text-lg leading-relaxed text-on-surface whitespace-pre-wrap break-words">
+                  </p>
+                </div>
+                <span id="detail-time"
+                  class="text-[10px] text-on-surface-variant font-medium mt-2 ml-1 uppercase tracking-widest"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Reply Area -->
+          <div id="reply-area"
+            class="p-6 bg-surface-container-low/50 backdrop-blur-md border-t border-white/5 flex-shrink-0 hidden">
+            <div class="relative flex items-center gap-3">
+              <div class="flex-1 relative min-w-0">
+                <input id="reply-input"
+                  class="w-full bg-surface-container-lowest border border-white/10 rounded-full py-4 pl-6 pr-14 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
+                  placeholder="Type your reply..." type="text" />
+                <div class="absolute right-2 top-2">
+                  <button id="btn-send" onclick="sendReply()"
+                    class="bg-gradient-to-br from-primary to-primary-container text-on-primary-container h-10 w-10 flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-50">
+                    <span class="material-symbols-outlined font-bold">send</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script src="/app.js"></script>
+</body>
+
+</html>

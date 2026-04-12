@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gradlew.bat *)",
+      "Bash(dir *)",
+      "Bash(\"c:\\users\\uitaek\\appdata\\local\\android\\sdk\\platform-tools\\adb.exe\" *)",
+      "Bash(findstr *)",
+      "Bash(\"c:\\program files\\android\\android studio\\jbr\\bin\\java.exe\" *)",
+      "Bash(git rm *)",
+      "Bash(git reset *)",
+      "Bash(git add *)"
+    ]
+  },
+  "$version": 3
+}

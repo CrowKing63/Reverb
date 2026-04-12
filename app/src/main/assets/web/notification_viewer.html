@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Luminous Bridge | Notification Center</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-pane {
+            background: rgba(25, 25, 28, 0.4);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-fixed": "#000000",
+                        "inverse-on-surface": "#555557",
+                        "on-primary-fixed-variant": "#002a61",
+                        "surface-container-low": "#131315",
+                        "on-tertiary-container": "#60136d",
+                        "outline": "#767577",
+                        "secondary-fixed": "#eec2ff",
+                        "surface": "#0e0e10",
+                        "secondary-fixed-dim": "#e7afff",
+                        "on-surface-variant": "#acaaad",
+                        "primary-fixed-dim": "#5191ff",
+                        "tertiary-fixed-dim": "#e48fec",
+                        "secondary": "#d277ff",
+                        "tertiary-container": "#f39cfb",
+                        "on-error": "#490006",
+                        "tertiary-dim": "#e48fec",
+                        "primary-fixed": "#6c9fff",
+                        "secondary-container": "#7d01b1",
+                        "on-tertiary-fixed": "#41004d",
+                        "surface-container-highest": "#252528",
+                        "on-secondary": "#380052",
+                        "tertiary-fixed": "#f39cfb",
+                        "error": "#ff716c",
+                        "on-background": "#fefbfe",
+                        "on-tertiary-fixed-variant": "#6a1f76",
+                        "tertiary": "#fab0ff",
+                        "on-primary-container": "#00214f",
+                        "on-secondary-fixed-variant": "#800ab4",
+                        "on-secondary-container": "#f3cfff",
+                        "surface-container-high": "#1f1f22",
+                        "surface-dim": "#0e0e10",
+                        "primary-dim": "#0070eb",
+                        "surface-tint": "#85adff",
+                        "surface-bright": "#2c2c2f",
+                        "on-surface": "#fefbfe",
+                        "on-error-container": "#ffa8a3",
+                        "primary-container": "#6c9fff",
+                        "surface-container": "#19191c",
+                        "surface-container-lowest": "#000000",
+                        "surface-variant": "#252528",
+                        "error-container": "#9f0519",
+                        "secondary-dim": "#d277ff",
+                        "on-primary": "#002c65",
+                        "inverse-surface": "#fcf8fb",
+                        "primary": "#85adff",
+                        "inverse-primary": "#005bc2",
+                        "on-tertiary": "#6b1f77",
+                        "on-secondary-fixed": "#56007c",
+                        "outline-variant": "#48474a",
+                        "error-dim": "#d7383b",
+                        "background": "#0e0e10"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface h-screen overflow-hidden flex flex-col">
+<!-- Abstract Background -->
+<div class="fixed inset-0 z-0 pointer-events-none">
+<div class="absolute inset-0 bg-gradient-to-br from-surface to-surface-container-low"></div>
+<div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/5 blur-[100px]"></div>
+</div>
+<!-- Tablet-style Status Bar (Minimal) -->
+<div class="relative z-20 flex justify-between items-center px-8 py-4 opacity-60">
+<div class="flex items-center gap-4">
+<span class="text-sm font-semibold tracking-wide">10:42 AM</span>
+<div class="flex items-center gap-2 px-2 py-0.5 rounded-full bg-white/5 text-[10px] uppercase font-bold tracking-widest text-primary">
+                Pixel 8 Pro
+            </div>
+</div>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-sm">wifi</span>
+<span class="material-symbols-outlined text-sm">battery_80</span>
+</div>
+</div>
+<!-- Main Tablet Notification View -->
+<main class="relative z-10 flex-1 flex flex-col md:flex-row max-w-7xl mx-auto w-full h-full p-4 md:p-8 gap-8 overflow-hidden">
+<!-- Left Pane: Notification Shade List -->
+<section class="w-full md:w-5/12 lg:w-4/12 flex flex-col h-full">
+<div class="flex items-center justify-between mb-6 px-2">
+<h1 class="text-3xl font-bold tracking-tight">Stream</h1>
+<button class="text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2 pb-10">
+<!-- Notification Item (Active) -->
+<div class="glass-pane p-5 rounded-2xl border-2 border-primary/40 shadow-lg cursor-pointer transition-all hover:scale-[1.01] active:scale-[0.99]">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">chat</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center">
+<h3 class="font-bold truncate text-on-surface">Sarah Mitchell</h3>
+<span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">2m ago</span>
+</div>
+<p class="text-sm text-on-surface-variant truncate">"Hey! Did you see the latest spatial design concepts..."</p>
+</div>
+</div>
+</div>
+<!-- Notification Item -->
+<div class="glass-pane p-5 rounded-2xl border border-white/5 cursor-pointer transition-all hover:bg-white/5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl text-primary-fixed" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center">
+<h3 class="font-bold truncate text-on-surface">Design Review</h3>
+<span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">15m ago</span>
+</div>
+<p class="text-sm text-on-surface-variant truncate">Join the team in 15 minutes for the weekly sync...</p>
+</div>
+</div>
+</div>
+<!-- Notification Item -->
+<div class="glass-pane p-5 rounded-2xl border border-white/5 cursor-pointer transition-all hover:bg-white/5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-tertiary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl text-tertiary-fixed">mail</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center">
+<h3 class="font-bold truncate text-on-surface">Project Aurora</h3>
+<span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">1h ago</span>
+</div>
+<p class="text-sm text-on-surface-variant truncate">Alex shared 3 new design assets for review</p>
+</div>
+</div>
+</div>
+<!-- Notification Item -->
+<div class="glass-pane p-5 rounded-2xl border border-white/5 cursor-pointer transition-all hover:bg-white/5">
+<div class="flex items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-surface-container-high border border-white/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-2xl text-on-surface-variant">bolt</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center">
+<h3 class="font-bold truncate text-on-surface">System Update</h3>
+<span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest">3h ago</span>
+</div>
+<p class="text-sm text-on-surface-variant truncate">Battery optimization applied for Pixel 8 Pro</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Right Pane: Notification Detail -->
+<section class="hidden md:flex flex-1 flex-col h-full">
+<div class="glass-pane rounded-[2rem] border border-white/10 shadow-2xl flex flex-col h-full overflow-hidden relative">
+<!-- Message Header -->
+<div class="px-8 py-6 border-b border-white/5 flex items-center justify-between">
+<div class="flex items-center gap-4">
+<div class="w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-2xl text-on-secondary-container">person</span>
+</div>
+<div>
+<h2 class="text-xl font-bold text-on-surface">Sarah Mitchell</h2>
+<p class="text-xs font-medium text-secondary uppercase tracking-widest">WhatsApp • Active now</p>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="p-3 rounded-full hover:bg-white/5 text-on-surface-variant"><span class="material-symbols-outlined">call</span></button>
+<button class="p-3 rounded-full hover:bg-white/5 text-on-surface-variant"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+<!-- Message Content Area -->
+<div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+<div class="flex flex-col gap-6">
+<!-- Sender Bubble -->
+<div class="flex flex-col items-start max-w-[85%]">
+<div class="bg-surface-container-high rounded-t-2xl rounded-br-2xl p-6 shadow-sm">
+<p class="text-lg leading-relaxed text-on-surface">
+                                    "Hey! Did you see the latest spatial design concepts for the Vision Pro? We should integrate some of these luminous patterns into the Bridge dashboard."
+                                </p>
+</div>
+<span class="text-[10px] text-on-surface-variant font-medium mt-2 ml-1 uppercase tracking-widest">10:40 AM</span>
+</div>
+<!-- Receiver Bubble Placeholder (Empty state) -->
+<div class="flex justify-center mt-12">
+<div class="text-[10px] text-on-surface-variant/40 font-bold uppercase tracking-[0.2em] border border-white/5 px-4 py-1 rounded-full">
+                                End of Thread
+                            </div>
+</div>
+</div>
+</div>
+<!-- Reply Area (Locked to Bottom) -->
+<div class="p-6 bg-surface-container-low/50 backdrop-blur-md">
+<div class="relative flex items-center gap-3">
+<button class="p-3 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined">add_circle</span>
+</button>
+<div class="flex-1 relative">
+<input class="w-full bg-surface-container-lowest border border-white/10 rounded-full py-4 pl-6 pr-14 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all" placeholder="Type your reply..." type="text"/>
+<div class="absolute right-2 top-2">
+<button class="bg-gradient-to-br from-primary to-primary-container text-on-primary-container h-10 w-10 flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Global Close/Home Strip -->
+<div class="relative z-20 flex justify-center pb-4 pt-2">
+<div class="w-32 h-1.5 bg-white/10 rounded-full hover:bg-white/20 transition-colors cursor-pointer"></div>
+</div>
+</body></html>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Reverb" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#0A84FF</item>
+        <item name="colorPrimaryVariant">#005EC2</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorSurface">#1E1E1E</item>
+        <item name="android:windowBackground">#121212</item>
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:navigationBarColor">#121212</item>
+    </style>
+</resources>

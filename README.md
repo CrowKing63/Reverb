@@ -5,6 +5,10 @@
 Reverb is an Android app that runs an embedded HTTP/WebSocket server on your device, forwarding notifications to connected web clients (browser, Vision Pro, etc.) over your local network. Reply to messages, filter apps, and even find your device — all from your web.
 
 <p align="center">
+  <img src="app/src/main/ic_launcher-playstore.png" alt="Reverb Icon" width="128" height="128" />
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Kotlin-2.0.21-blue?style=for-the-badge&logo=kotlin" alt="Kotlin" />
   <img src="https://img.shields.io/badge/Android%20SDK-35-green?style=for-the-badge&logo=android" alt="Android SDK" />
   <img src="https://img.shields.io/badge/Ktor-3.0.1-orange?style=for-the-badge&logo=kotlin" alt="Ktor" />
@@ -27,8 +31,10 @@ Reverb is an Android app that runs an embedded HTTP/WebSocket server on your dev
 ## 📸 Screenshots
 
 <p align="center">
-  <em>Add your screenshots here</em>
+  <img src="app/src/main/assets/web/screenshot.png" alt="Web Client Screenshot" width="800" />
 </p>
+
+<p align="center"><em>Web client showing mirrored notifications</em></p>
 
 ---
 

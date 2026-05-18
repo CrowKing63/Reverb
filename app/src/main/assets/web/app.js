@@ -1,78 +1,128 @@
 'use strict';
 
-// ── 상태 ────────────────────────────────────────────────────────
-let ws = null;
-let reconnectDelay = 1000;
-let notifications = new Map(); // id → payload
-let activeReply = null;        // 현재 답장 중인 알림 payload
-let activeDetailCard = null;   // 액티브(선택된) 카드 엘리먼트
-let connectionHealthy = false; // 연결 건강 상태
+const state = {
+  ws: null,
+  reconnectDelay: 1000,
+  notifications: [],
+  selectedId: null,
+  freshIds: new Set(),
+  filters: {
+    category: 'all'
+  },
+  forwarding: {
+    mode: 'blacklist',
+    packages: []
+  }
+};
 
-// ── WebSocket 연결 ────────────────────────────────────────────────
+const els = {
+  deviceName: document.getElementById('device-name'),
+  connectionSummary: document.getElementById('connection-summary'),
+  connectionDot: document.getElementById('connection-dot'),
+  connectionLabel: document.getElementById('connection-label'),
+  batteryText: document.getElementById('battery-text'),
+  categoryFilters: document.getElementById('category-filters'),
+  resultsCount: document.getElementById('results-count'),
+  notificationsList: document.getElementById('notifications-list'),
+  emptyState: document.getElementById('empty-state'),
+  detailPanel: document.getElementById('detail-panel'),
+  detailEmpty: document.getElementById('detail-empty'),
+  detailContent: document.getElementById('detail-content'),
+  detailSender: document.getElementById('detail-sender'),
+  detailApp: document.getElementById('detail-app'),
+  detailTime: document.getElementById('detail-time'),
+  detailCategory: document.getElementById('detail-category'),
+  detailText: document.getElementById('detail-text'),
+  replySection: document.getElementById('reply-section'),
+  replyInput: document.getElementById('reply-input'),
+  sendButton: document.getElementById('btn-send'),
+  clearFeedButton: document.getElementById('btn-clear-feed'),
+  openForwardingButton: document.getElementById('btn-open-forwarding'),
+  closeForwardingButton: document.getElementById('btn-close-forwarding'),
+  refreshForwardingButton: document.getElementById('btn-refresh-forwarding'),
+  forwardingDrawer: document.getElementById('forwarding-drawer'),
+  forwardingPackages: document.getElementById('forwarding-packages'),
+  forwardingEmpty: document.getElementById('forwarding-empty'),
+  testButton: document.getElementById('btn-test'),
+  ringButton: document.getElementById('btn-ring'),
+  closeDetailButton: document.getElementById('btn-close-detail'),
+  overlay: document.getElementById('overlay'),
+  toast: document.getElementById('toast')
+};
+
+function syncTokenFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  if (!token) return;
+
+  localStorage.setItem('reverb_token', token.trim());
+  params.delete('token');
+  const next = params.toString();
+  const nextUrl = next ? `${window.location.pathname}?${next}` : window.location.pathname;
+  window.history.replaceState({}, '', nextUrl);
+}
+
+function setConnectionState(isOnline, summary) {
+  els.connectionDot.classList.toggle('online', isOnline);
+  els.connectionDot.classList.toggle('offline', !isOnline);
+  els.connectionLabel.textContent = isOnline ? '온라인' : '오프라인';
+  els.connectionSummary.textContent = summary;
+}
+
 function connect() {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const token = localStorage.getItem('reverb_token');
   const url = token
-    ? `${protocol}//${location.host}/ws?token=${encodeURIComponent(token)}`
-    : `${protocol}//${location.host}/ws`;
+    ? `${protocol}//${window.location.host}/ws?token=${encodeURIComponent(token)}`
+    : `${protocol}//${window.location.host}/ws`;
 
-  console.log('WebSocket 연결 시도:', url);
-  ws = new WebSocket(url);
+  state.ws = new WebSocket(url);
 
-  ws.onopen = () => {
-    console.log('✅ WebSocket 연결 성공');
-    reconnectDelay = 1000;
-    connectionHealthy = true;
-    setOnline(true);
-    showToast('🟢 서버에 연결되었습니다', 2000);
+  state.ws.onopen = () => {
+    state.reconnectDelay = 1000;
+    setConnectionState(true, '');
+    showToast('서버와 연결되었습니다.');
   };
 
-  ws.onmessage = (event) => {
+  state.ws.onmessage = event => {
     try {
-      const data = JSON.parse(event.data);
-      handleMessage(data);
-    } catch (e) {
-      console.error('메시지 파싱 오류:', e);
+      handleMessage(JSON.parse(event.data));
+    } catch (error) {
+      showToast(`메시지를 해석하지 못했습니다: ${error.message}`);
     }
   };
 
-  ws.onclose = (event) => {
-    console.log('⚠️ WebSocket 연결 종료 (코드:', event.code, ' reason:', event.reason, ')');
-    connectionHealthy = false;
-    setOnline(false);
+  state.ws.onclose = event => {
+    setConnectionState(false, '');
+
     if (event.code === 1008) {
-      // 토큰 오류: 재입력 요청
-      console.warn('토큰 인증 실패');
       localStorage.removeItem('reverb_token');
-      const newToken = prompt('Reverb 토큰을 입력하세요 (Android 앱에서 확인):');
-      if (newToken) {
-        localStorage.setItem('reverb_token', newToken.trim());
-        setTimeout(connect, 500);
+      const nextToken = window.prompt('Reverb 토큰을 입력하세요. Android 앱 대시보드에서 확인할 수 있습니다.');
+      if (nextToken) {
+        localStorage.setItem('reverb_token', nextToken.trim());
+        window.setTimeout(connect, 400);
       }
       return;
     }
-    showToast('🔴 연결 끊김, 재연결 중...', 3000);
+
     scheduleReconnect();
   };
 
-  ws.onerror = (error) => {
-    console.error('❌ WebSocket 오류:', error);
-    connectionHealthy = false;
-    setOnline(false);
+  state.ws.onerror = () => {
+    setConnectionState(false, '');
   };
 }
 
 function scheduleReconnect() {
-  console.log(`🔄 ${reconnectDelay}ms 후 재연결 시도...`);
-  setTimeout(() => {
-    if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+  const delay = state.reconnectDelay;
+  window.setTimeout(() => {
+    if (!state.ws || state.ws.readyState >= WebSocket.CLOSING) {
       connect();
     }
-  }, reconnectDelay);
-  reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+  }, delay);
+  state.reconnectDelay = Math.min(state.reconnectDelay * 2, 30000);
 }
 
-// ── 메시지 처리 ────────────────────────────────────────────────
 function handleMessage(data) {
   switch (data.type) {
     case 'snapshot':
@@ -85,363 +135,431 @@ function handleMessage(data) {
       onStatus(data);
       break;
     default:
-      console.log('알 수 없는 메시지 타입:', data.type, data);
+      showToast('알 수 없는 메시지 타입을 받았습니다.');
   }
 }
 
 function onSnapshot(data) {
-  console.log('📦 스냅샷 수신 - 알림 개수:', data.notifications?.length || 0);
-
-  // 상태 업데이트
-  document.getElementById('device-name').textContent = data.deviceName || 'Android';
+  els.deviceName.textContent = data.deviceName || 'Android 기기';
   updateBattery(data.batteryLevel, data.batteryCharging);
 
-  // 알림 전체 렌더링 (최신순)
-  notifications.clear();
-  const feed = document.getElementById('notifications');
-  feed.innerHTML = '';
+  state.notifications = Array.isArray(data.notifications)
+    ? [...data.notifications].sort((a, b) => b.timestamp - a.timestamp)
+    : [];
 
-  if (!data.notifications || data.notifications.length === 0) {
-    feed.innerHTML = `
-      <div id="empty-state" class="flex flex-col items-center justify-center h-full text-center text-on-surface-variant opacity-60 gap-4 mt-20">
-          <span class="material-symbols-outlined text-6xl opacity-40">phonelink_ring</span>
-          <p class="text-lg font-bold">아직 알림이 없습니다</p>
-          <p class="text-xs uppercase tracking-widest mt-2">Android 폰에서 알림이 오면 표시됩니다</p>
-      </div>`;
-    return;
+  if (!state.selectedId && state.notifications.length > 0) {
+    state.selectedId = state.notifications[0].id;
   }
 
-  // 오래된 것 → 최신 순으로 정렬 후 역순 렌더 (최신이 맨 위)
-  const sorted = [...data.notifications].sort((a, b) => a.timestamp - b.timestamp);
-  sorted.reverse().forEach(n => {
-    notifications.set(n.id, n);
-    feed.appendChild(buildCard(n));
-  });
-
-  console.log('✅ 스냅샷 렌더링 완료 -', sorted.length, '개 알림 표시');
+  renderNotifications();
+  renderDetail();
 }
 
-function onNotification(data) {
-  console.log('📨 새 알림 수신:', data.appLabel, '-', data.title);
-
-  // 중복 확인
-  if (notifications.has(data.id)) {
-    console.log('⚠️ 중복 알림 무시:', data.id);
+function onNotification(notification) {
+  if (state.notifications.some(item => item.id === notification.id)) {
     return;
   }
 
-  // empty-state 제거
-  const emptyState = document.getElementById('empty-state');
-  if (emptyState) emptyState.remove();
+  state.notifications.unshift(notification);
+  state.notifications.sort((a, b) => b.timestamp - a.timestamp);
+  state.freshIds.add(notification.id);
+  state.selectedId = notification.id;
 
-  notifications.set(data.id, data);
+  renderNotifications();
+  renderDetail();
+  openDetailIfMobile();
+  showToast(`${notification.appLabel || '새 알림'} 알림이 도착했습니다.`);
 
-  const feed = document.getElementById('notifications');
-  const card = buildCard(data);
-
-  // 애니메이션 효과 추가
-  card.style.opacity = '0';
-  card.style.transform = 'translateY(-20px)';
-  feed.prepend(card);
-
-  // 부드러운 애니메이션
-  requestAnimationFrame(() => {
-    card.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-    card.style.opacity = '1';
-    card.style.transform = 'translateY(0)';
-  });
-
-  // 최대 200개 유지
-  while (feed.children.length > 200) feed.lastChild.remove();
-
-  // 토스트 알림 (새 알림 왔음을 명시적으로 표시)
-  showToast(`🔔 ${data.appLabel || '새 알림'}`, 2000);
-
-  // 오디오 큐 (탭이 포커스된 경우에만)
-  if (document.visibilityState === 'visible') playChime();
+  window.setTimeout(() => {
+    state.freshIds.delete(notification.id);
+    renderNotifications();
+  }, 5000);
 }
 
 function onStatus(data) {
-  if (data.deviceName) document.getElementById('device-name').textContent = data.deviceName;
+  if (data.deviceName) {
+    els.deviceName.textContent = data.deviceName;
+  }
   updateBattery(data.batteryLevel, data.batteryCharging);
 }
 
-// ── 카드 빌더 (Stitch UI 구조 연동) ────────────────────────────────────────────────────
-function buildCard(n) {
-  const card = document.createElement('div');
-  // 카드 스타일: overflow-hidden 제거하여 패딩 정상 작동
-  card.className = `glass-pane p-5 rounded-2xl border border-white/5 cursor-pointer transition-all hover:bg-white/5 mb-3`;
-  card.dataset.id = n.id;
+function updateBattery(level, charging) {
+  if (typeof level !== 'number' || level < 0) {
+    els.batteryText.textContent = '확인 중';
+    return;
+  }
 
-  const time = formatTime(n.timestamp);
+  els.batteryText.textContent = charging ? `${level}% 충전` : `${level}%`;
+}
 
-  card.innerHTML = `
-    <div class="flex items-start gap-4 pointer-events-none">
-        <div class="w-12 h-12 rounded-xl bg-primary-container/20 flex items-center justify-center flex-shrink-0 mt-0.5">
-            <span class="material-symbols-outlined text-2xl text-primary-fixed" style="font-variation-settings: 'FILL' 1;">
-              ${n.category === 'call' ? 'call' : (n.category === 'sms' ? 'chat' : 'notifications')}
-            </span>
+function getFilteredNotifications() {
+  return state.notifications.filter(notification => {
+    return state.filters.category === 'all' || notification.category === state.filters.category;
+  });
+}
+
+function renderNotifications() {
+  const filtered = getFilteredNotifications();
+  els.notificationsList.innerHTML = '';
+  els.resultsCount.textContent = `${filtered.length}개 알림`;
+  els.emptyState.hidden = filtered.length > 0;
+
+  filtered.forEach(notification => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'notification-card';
+    button.classList.toggle('is-selected', notification.id === state.selectedId);
+    button.classList.toggle('is-fresh', state.freshIds.has(notification.id));
+    button.setAttribute('aria-pressed', notification.id === state.selectedId ? 'true' : 'false');
+    button.innerHTML = `
+      <div class="notification-card__top">
+        <div>
+          <p class="notification-card__app">${escapeHtml(notification.appLabel || notification.packageName)}</p>
+          <h3 class="notification-card__title">${escapeHtml(notification.title || notification.appLabel || '제목 없음')}</h3>
         </div>
-        <div class="flex-1 min-w-0">
-            <div class="flex justify-between items-start mb-1 gap-2">
-                <h3 class="font-bold text-on-surface text-sm card-title">${escHtml(n.title || n.appLabel || n.packageName)}</h3>
-                <span class="text-[10px] text-on-surface-variant font-medium uppercase tracking-widest flex-shrink-0">${time}</span>
-            </div>
-            <p class="text-xs text-on-surface-variant card-body">${escHtml(n.body || '')}</p>
-        </div>
-    </div>
-  `;
+        <span class="notification-card__time">${formatTime(notification.timestamp)}</span>
+      </div>
+      <p class="notification-card__body">${escapeHtml(notification.body || '본문이 없는 알림입니다.')}</p>
+      <div class="notification-card__bottom">
+        <span class="notification-card__category">${categoryLabel(notification.category)}</span>
+        <span class="notification-card__category">${canReply(notification) ? '답장 가능' : '읽기 전용'}</span>
+      </div>
+    `;
 
-  card.onclick = () => showDetailView(n, card);
-  return card;
+    button.addEventListener('click', () => {
+      state.selectedId = notification.id;
+      renderNotifications();
+      renderDetail();
+      openDetailIfMobile();
+    });
+
+    els.notificationsList.appendChild(button);
+  });
 }
 
-// ── 우측 디테일 창 보기 로직 ───────────────────────────────────────────────────
-function showDetailView(n, cardEl) {
-  activeReply = n;
+function renderDetail() {
+  const notification = state.notifications.find(item => item.id === state.selectedId);
+  const visibleIds = new Set(getFilteredNotifications().map(item => item.id));
+  const isVisible = notification && visibleIds.has(notification.id);
 
-  // 카드 하이라이트 토글
-  if (activeDetailCard) {
-    activeDetailCard.classList.remove('border-primary/40', 'bg-white/5');
-    activeDetailCard.classList.add('border-white/5');
-  }
-  activeDetailCard = cardEl;
-  cardEl.classList.remove('border-white/5');
-  cardEl.classList.add('border-primary/40', 'bg-white/5');
-
-  // 디테일 패널 전환
-  const emptyPane = document.getElementById('right-pane-empty');
-  const contentPane = document.getElementById('right-pane-content');
-
-  if (emptyPane && contentPane) {
-    emptyPane.classList.add('hidden');
-    contentPane.classList.remove('hidden');
-    contentPane.classList.add('flex');
+  if (!notification || !isVisible) {
+    els.detailEmpty.hidden = false;
+    els.detailContent.hidden = true;
+    closeDetailIfMobile();
+    return;
   }
 
-  // 텍스트 & 앱 정보 업데이트
-  document.getElementById('detail-sender').textContent = n.title || n.appLabel || n.packageName;
-  document.getElementById('detail-app').textContent = n.appLabel || '';
-  document.getElementById('detail-text').textContent = n.body || '';
-  document.getElementById('detail-time').textContent = formatTime(n.timestamp);
+  els.detailEmpty.hidden = true;
+  els.detailContent.hidden = false;
+  els.detailSender.textContent = notification.title || notification.appLabel || notification.packageName;
+  els.detailApp.textContent = notification.appLabel || notification.packageName;
+  els.detailTime.textContent = formatFullTime(notification.timestamp);
+  els.detailCategory.textContent = categoryLabel(notification.category);
+  els.detailText.textContent = notification.body || '본문이 없는 알림입니다.';
 
-  // 답장 가능 여부에 따른 하단 입력 영역 토글
-  const hasReply = n.conversationId && n.actions && n.actions.some(a => /답장|reply|respond/i.test(a));
-  const replyArea = document.getElementById('reply-area');
-  const replyInput = document.getElementById('reply-input');
-
-  if (replyArea) {
-    if (hasReply) {
-      replyArea.classList.remove('hidden');
-      replyArea.classList.add('flex');
-      replyInput.value = '';
-      replyInput.focus();
-    } else {
-      replyArea.classList.add('hidden');
-      replyArea.classList.remove('flex');
-    }
+  const replyable = canReply(notification);
+  els.replySection.hidden = !replyable;
+  if (!replyable) {
+    els.replyInput.value = '';
   }
 }
 
-// 기존 Dialog용은 남겨두지만 더 이상 사용하지 않으므로 무시해도 무방
-function openReplyModal(payload) {
-  activeReply = typeof payload === 'string' ? JSON.parse(payload) : payload;
-}
-function closeReplyModal() {
-  activeReply = null;
+function canReply(notification) {
+  return Boolean(
+    notification.conversationId &&
+    Array.isArray(notification.actions) &&
+    notification.actions.some(action => /답장|reply|respond/i.test(action))
+  );
 }
 
-// ── 답장 API 호출 ────────────────────────────────────────────────────────
+function categoryLabel(category) {
+  switch (category) {
+    case 'sms':
+      return '메시지';
+    case 'call':
+      return '전화';
+    case 'media':
+      return '미디어';
+    default:
+      return '기타';
+  }
+}
+
 async function sendReply() {
-  if (!activeReply) return;
-  const input = document.getElementById('reply-input');
-  const body = input ? input.value.trim() : '';
-  if (!body) return;
+  const notification = state.notifications.find(item => item.id === state.selectedId);
+  if (!notification || !canReply(notification)) {
+    return;
+  }
 
-  const btn = document.getElementById('btn-send');
-  if (btn) btn.disabled = true;
+  const replyBody = els.replyInput.value.trim();
+  if (!replyBody) {
+    showToast('답장 내용을 입력하세요.');
+    return;
+  }
+
+  els.sendButton.disabled = true;
 
   try {
-    const res = await fetch('/api/reply', {
+    const response = await fetch('/api/reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        conversationId: activeReply.conversationId,
-        packageName: activeReply.packageName,
-        replyBody: body
+        conversationId: notification.conversationId,
+        packageName: notification.packageName,
+        replyBody
       })
     });
-    if (res.ok) {
-      showToast('답장이 전송되었습니다 ✓');
-      if (input) input.value = '';
-      if (btn) btn.disabled = false;
-    } else {
-      const err = await res.json().catch(() => ({}));
-      showToast('전송 실패: ' + (err.error || res.status));
-      if (btn) btn.disabled = false;
+
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) {
+      throw new Error(payload.error || `HTTP ${response.status}`);
     }
-  } catch (e) {
-    showToast('네트워크 오류');
-    if (btn) btn.disabled = false;
+
+    els.replyInput.value = '';
+    showToast('답장을 전송했습니다.');
+  } catch (error) {
+    showToast(`답장 전송에 실패했습니다: ${error.message}`);
+  } finally {
+    els.sendButton.disabled = false;
   }
 }
 
-// Enter 키 전송 로직 (새로운 Input 포커스 시)
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    const replyInput = document.getElementById('reply-input');
-    if (document.activeElement === replyInput) {
-      e.preventDefault();
+async function sendTestNotification() {
+  try {
+    const response = await fetch('/api/test-notification', { method: 'POST' });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    showToast('테스트 알림을 요청했습니다.');
+  } catch (error) {
+    showToast(`테스트 알림 요청에 실패했습니다: ${error.message}`);
+  }
+}
+
+async function ringDevice() {
+  try {
+    const response = await fetch('/api/ring', { method: 'POST' });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    showToast('기기 벨소리를 재생했습니다.');
+  } catch (error) {
+    showToast(`폰 찾기 요청에 실패했습니다: ${error.message}`);
+  }
+}
+
+async function loadForwardingRules() {
+  try {
+    const response = await fetch('/api/filters');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const config = await response.json();
+    state.forwarding.mode = config.mode || 'blacklist';
+    state.forwarding.packages = Array.isArray(config.packages) ? config.packages : [];
+    renderForwardingRules();
+  } catch (error) {
+    showToast(`전달 규칙을 불러오지 못했습니다: ${error.message}`);
+  }
+}
+
+function renderForwardingRules() {
+  document.querySelectorAll('input[name="forwarding-mode"]').forEach(input => {
+    input.checked = input.value === state.forwarding.mode;
+  });
+
+  els.forwardingPackages.innerHTML = '';
+  els.forwardingEmpty.hidden = state.forwarding.packages.length > 0;
+
+  state.forwarding.packages.forEach(packageName => {
+    const item = document.createElement('li');
+    item.innerHTML = `
+      <div>
+        <strong>${escapeHtml(packageName.split('.').pop() || packageName)}</strong>
+        <br />
+        <code>${escapeHtml(packageName)}</code>
+      </div>
+    `;
+
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'secondary-button';
+    removeButton.textContent = '제거';
+    removeButton.addEventListener('click', () => removeForwardingPackage(packageName));
+    item.appendChild(removeButton);
+    els.forwardingPackages.appendChild(item);
+  });
+}
+
+async function updateForwardingMode(mode) {
+  try {
+    const response = await fetch('/api/filters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode,
+        packages: state.forwarding.packages
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    state.forwarding.mode = mode;
+    renderForwardingRules();
+    showToast('전달 모드를 변경했습니다.');
+  } catch (error) {
+    showToast(`전달 모드 변경에 실패했습니다: ${error.message}`);
+  }
+}
+
+async function removeForwardingPackage(packageName) {
+  const nextPackages = state.forwarding.packages.filter(item => item !== packageName);
+  try {
+    const response = await fetch('/api/filters', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        mode: state.forwarding.mode,
+        packages: nextPackages
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    state.forwarding.packages = nextPackages;
+    renderForwardingRules();
+    showToast('패키지를 전달 규칙에서 제거했습니다.');
+  } catch (error) {
+    showToast(`패키지 제거에 실패했습니다: ${error.message}`);
+  }
+}
+
+function openForwardingDrawer() {
+  els.forwardingDrawer.hidden = false;
+  els.overlay.hidden = false;
+}
+
+function closeForwardingDrawer() {
+  els.forwardingDrawer.hidden = true;
+  if (!els.detailPanel.classList.contains('is-open')) {
+    els.overlay.hidden = true;
+  }
+}
+
+function openDetailIfMobile() {
+  if (window.innerWidth > 840) {
+    return;
+  }
+  els.detailPanel.classList.add('is-open');
+  els.overlay.hidden = false;
+}
+
+function closeDetailIfMobile() {
+  if (window.innerWidth > 840) {
+    return;
+  }
+  els.detailPanel.classList.remove('is-open');
+  if (els.forwardingDrawer.hidden) {
+    els.overlay.hidden = true;
+  }
+}
+
+function showToast(message) {
+  els.toast.textContent = message;
+  els.toast.classList.add('is-visible');
+  window.clearTimeout(showToast.timer);
+  showToast.timer = window.setTimeout(() => {
+    els.toast.classList.remove('is-visible');
+  }, 2600);
+}
+
+function formatTime(timestamp) {
+  return new Date(timestamp).toLocaleTimeString('ko-KR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function formatFullTime(timestamp) {
+  return new Date(timestamp).toLocaleString('ko-KR', {
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function bindEvents() {
+  els.categoryFilters.addEventListener('click', event => {
+    const button = event.target.closest('button[data-category]');
+    if (!button) return;
+
+    state.filters.category = button.dataset.category;
+    els.categoryFilters.querySelectorAll('.chip').forEach(chip => {
+      chip.classList.toggle('is-active', chip === button);
+    });
+    renderNotifications();
+    renderDetail();
+  });
+
+  els.sendButton.addEventListener('click', sendReply);
+  els.replyInput.addEventListener('keydown', event => {
+    if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
       sendReply();
     }
-  }
-});
+  });
 
-// ── 필터 패널 ────────────────────────────────────────────────────
-function toggleFilter() {
-  const panel = document.getElementById('filter-panel');
-  if (!panel) return;
-  panel.classList.toggle('hidden');
-  if (!panel.classList.contains('hidden')) loadFilters();
-}
+  els.testButton.addEventListener('click', sendTestNotification);
+  els.ringButton.addEventListener('click', ringDevice);
+  els.clearFeedButton.addEventListener('click', () => {
+    state.notifications = [];
+    state.selectedId = null;
+    renderNotifications();
+    renderDetail();
+  });
 
-async function loadFilters() {
-  try {
-    const res = await fetch('/api/filters');
-    const config = await res.json();
+  els.openForwardingButton.addEventListener('click', async () => {
+    openForwardingDrawer();
+    await loadForwardingRules();
+  });
+  els.closeForwardingButton.addEventListener('click', closeForwardingDrawer);
+  els.refreshForwardingButton.addEventListener('click', loadForwardingRules);
+  els.closeDetailButton.addEventListener('click', closeDetailIfMobile);
+  els.overlay.addEventListener('click', () => {
+    closeForwardingDrawer();
+    closeDetailIfMobile();
+  });
 
-    const radios = document.querySelectorAll('input[name="mode"]');
-    radios.forEach(r => { r.checked = r.value === config.mode; });
-
-    const container = document.getElementById('filter-packages');
-    container.innerHTML = '';
-    (config.packages || []).forEach(pkg => {
-      const item = document.createElement('div');
-      item.className = 'filter-pkg-item';
-      item.innerHTML = `
-        <span class="truncate pr-2">${escHtml(pkg)}</span>
-        <button onclick="removeFilter('${escHtml(pkg)}')" class="text-red-400 hover:text-red-300">
-          <span class="material-symbols-outlined text-lg">close</span>
-        </button>
-      `;
-      container.appendChild(item);
+  document.querySelectorAll('input[name="forwarding-mode"]').forEach(input => {
+    input.addEventListener('change', event => {
+      if (event.target.checked) {
+        updateForwardingMode(event.target.value);
+      }
     });
-  } catch (e) {
-    console.error('필터 로드 실패:', e);
-  }
-}
+  });
 
-async function setFilterMode(mode) {
-  try {
-    const res = await fetch('/api/filters');
-    const config = await res.json();
-    await fetch('/api/filters', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...config, mode })
-    });
-  } catch (e) {
-    console.error('필터 모드 변경 실패:', e);
-  }
-}
-
-async function removeFilter(pkg) {
-  try {
-    const res = await fetch('/api/filters');
-    const config = await res.json();
-    const packages = (config.packages || []).filter(p => p !== pkg);
-    await fetch('/api/filters', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...config, packages })
-    });
-    loadFilters();
-  } catch (e) {
-    console.error('필터 제거 실패:', e);
-  }
-}
-
-// ── UI 헬퍼 ──────────────────────────────────────────────────────
-function setOnline(online) {
-  const dot = document.getElementById('connection-dot');
-  if (dot) dot.className = 'dot ' + (online ? 'online' : 'offline');
-  const dName = document.getElementById('device-name');
-  if (!online && dName) {
-    dName.textContent = '연결 끊김, 재연결 중...';
-  }
-}
-
-function updateBattery(level, charging) {
-  const el = document.getElementById('battery-text');
-  if (!el) return;
-  if (level == null || level < 0) { el.textContent = ''; return; }
-  const icon = charging ? '⚡' : (level <= 20 ? '🪫' : '🔋');
-  el.textContent = `${icon} ${level}%`;
-}
-
-function formatTime(ts) {
-  const d = new Date(ts);
-  const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) {
-    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-  }
-  return d.toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) +
-    ' ' + d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function escHtml(str) {
-  if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
-
-function showToast(msg, duration = 2500) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), duration);
-}
-
-function playChime() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.frequency.value = 880;
-    osc.type = 'sine';
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.3);
-  } catch (_) { }
-}
-
-// ── 초기화 ───────────────────────────────────────────────────────
-connect();
-
-// ── 테스트 알림 전송 ─────────────────────────────────────────────
-async function sendTestNotification() {
-  console.log('🧪 테스트 알림 전송 요청');
-
-  // 서버로 테스트 알림 요청을 보냄
-  try {
-    const response = await fetch('/api/test-notification', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-
-    if (response.ok) {
-      console.log('✅ 서버로 테스트 알림 요청 전송 성공');
-      showToast('🔔 서버에 테스트 알림 요청을 보냈습니다', 2000);
-    } else {
-      console.warn('⚠️ 서버 응답 오류:', response.status);
-      showToast('❌ 서버 요청 실패', 2000);
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      closeForwardingDrawer();
+      closeDetailIfMobile();
     }
-  } catch (e) {
-    console.error('❌ 네트워크 오류:', e);
-    showToast('❌ 네트워크 오류: ' + e.message, 3000);
-  }
+  });
 }
+
+syncTokenFromQuery();
+bindEvents();
+connect();
+loadForwardingRules();

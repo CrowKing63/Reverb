@@ -1,209 +1,162 @@
 <!DOCTYPE html>
-<html class="dark" lang="ko">
-
+<html lang="ko">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Reverb - Notification Center</title>
-
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <title>Reverb 알림 센터</title>
   <link href="/style.css" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-    rel="stylesheet" />
-
-  <style>
-    body {
-      font-family: 'Inter', -apple-system, "SF Pro Display", "Helvetica Neue", sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    .material-symbols-outlined {
-      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-    }
-
-    /* Notification card text clamping */
-    .card-title {
-      display: -webkit-box;
-      -webkit-line-clamp: 1;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .card-body {
-      display: -webkit-box;
-      -webkit-line-clamp: 3;
-      -webkit-box-orient: vertical;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.5;
-    }
-  </style>
-
-
 </head>
+<body>
+  <a class="skip-link" href="#notifications-list">알림 목록으로 건너뛰기</a>
 
-<body class="bg-surface text-on-surface h-screen overflow-hidden flex flex-col">
-  <!-- Abstract Background -->
-  <div class="fixed inset-0 z-0 pointer-events-none">
-    <div class="absolute inset-0 bg-gradient-to-br from-surface to-surface-container-low"></div>
-    <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-primary/10 blur-[120px]"></div>
-    <div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/5 blur-[100px]"></div>
+  <div class="app-shell">
+    <header class="utility-bar" aria-label="연결 상태">
+      <div class="utility-bar__status">
+        <div class="status-pill">
+          <span id="connection-dot" class="status-dot offline" aria-hidden="true"></span>
+          <span id="connection-label">오프라인</span>
+        </div>
+        <strong id="device-name" class="utility-bar__device">연결 대기 중</strong>
+        <span id="battery-text" class="utility-bar__battery">확인 중</span>
+      </div>
+
+      <p id="connection-summary" class="utility-bar__summary" aria-live="polite"></p>
+
+      <div class="utility-bar__actions">
+        <button id="btn-open-forwarding" type="button" class="link-button">전달 규칙</button>
+        <button id="btn-ring" type="button" class="link-button">폰 찾기</button>
+        <button id="btn-test" type="button" class="link-button">테스트</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="feed-panel" aria-labelledby="feed-title">
+        <div class="panel-heading panel-heading--feed">
+          <div class="panel-heading__title">
+            <p class="eyebrow">Live Feed</p>
+            <h2 id="feed-title">알림 스트림</h2>
+          </div>
+
+          <div class="panel-heading__meta">
+            <span id="results-count">0개 알림</span>
+            <button id="btn-clear-feed" type="button" class="link-button">목록 비우기</button>
+          </div>
+        </div>
+
+        <section class="feed-tools" aria-label="알림 필터">
+          <div class="field field--chips">
+            <div id="category-filters" class="chip-row" role="group" aria-label="카테고리 필터">
+              <button type="button" class="chip is-active" data-category="all">전체</button>
+              <button type="button" class="chip" data-category="sms">메시지</button>
+              <button type="button" class="chip" data-category="call">전화</button>
+              <button type="button" class="chip" data-category="media">미디어</button>
+              <button type="button" class="chip" data-category="generic">기타</button>
+            </div>
+          </div>
+        </section>
+
+        <div id="notifications-list" class="notification-list" tabindex="-1"></div>
+
+        <div id="empty-state" class="empty-state">
+          <h3>표시할 알림이 없습니다</h3>
+        </div>
+      </section>
+
+      <aside id="detail-panel" class="detail-panel" aria-labelledby="detail-title">
+        <div class="detail-panel__header">
+          <div>
+            <p class="eyebrow">Focused View</p>
+            <h2 id="detail-title">알림 상세</h2>
+          </div>
+          <button id="btn-close-detail" type="button" class="secondary-button detail-close">
+            닫기
+          </button>
+        </div>
+
+        <div id="detail-empty" class="detail-empty">
+          <h3>알림을 선택하세요</h3>
+        </div>
+
+        <div id="detail-content" class="detail-content" hidden>
+          <div class="detail-meta">
+            <div>
+              <p class="detail-meta__label">앱</p>
+              <p id="detail-app" class="detail-meta__value"></p>
+            </div>
+            <div>
+              <p class="detail-meta__label">수신 시각</p>
+              <p id="detail-time" class="detail-meta__value"></p>
+            </div>
+            <div>
+              <p class="detail-meta__label">카테고리</p>
+              <p id="detail-category" class="detail-meta__value"></p>
+            </div>
+          </div>
+
+          <article class="detail-message">
+            <h3 id="detail-sender"></h3>
+            <p id="detail-text"></p>
+          </article>
+
+          <section id="reply-section" class="reply-section" hidden aria-labelledby="reply-title">
+            <div class="reply-section__header">
+              <div><h3 id="reply-title">빠른 답장</h3></div>
+            </div>
+
+            <label class="field">
+              <span class="field__label">답장 내용</span>
+              <textarea id="reply-input" rows="4" placeholder="보낼 답장을 입력하세요"></textarea>
+            </label>
+
+            <div class="reply-actions">
+              <button id="btn-send" type="button" class="primary-button">답장 보내기</button>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </main>
   </div>
 
-  <!-- Status Bar -->
-  <div class="relative z-20 flex justify-between items-center px-8 py-4 opacity-70">
-    <div class="flex items-center gap-4">
-      <div id="connection-dot" class="dot offline"></div>
-      <div id="device-name"
-        class="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 text-[10px] uppercase font-bold tracking-widest text-primary">
-        연결 대기 중...
+  <aside id="forwarding-drawer" class="drawer" aria-labelledby="drawer-title" hidden>
+    <div class="drawer__surface">
+      <div class="drawer__header">
+        <div>
+          <p class="eyebrow">Forwarding Rules</p>
+          <h2 id="drawer-title">전달 규칙</h2>
+        </div>
+        <button id="btn-close-forwarding" type="button" class="secondary-button">닫기</button>
+      </div>
+
+      <p class="drawer__summary">
+        이 규칙은 Android 앱에서 관리하는 전달 필터와 연결됩니다. 여기서는 모드를 바꾸고 등록된 패키지를 제거할 수 있습니다.
+      </p>
+
+      <fieldset class="drawer__fieldset">
+        <legend>필터 모드</legend>
+        <label class="radio-row">
+          <input type="radio" name="forwarding-mode" value="blacklist" />
+          <span>차단 목록: 선택한 앱만 제외</span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="forwarding-mode" value="whitelist" />
+          <span>허용 목록: 선택한 앱만 전달</span>
+        </label>
+      </fieldset>
+
+      <div class="drawer__packages">
+        <div class="drawer__packages-header">
+          <h3>등록된 패키지</h3>
+          <button id="btn-refresh-forwarding" type="button" class="link-button">새로고침</button>
+        </div>
+        <ul id="forwarding-packages" class="package-list"></ul>
+        <p id="forwarding-empty" class="drawer__empty">등록된 패키지가 없습니다.</p>
       </div>
     </div>
-    <div class="flex items-center gap-4">
-      <button id="btn-test" onclick="sendTestNotification()" title="테스트 알림 전송"
-        class="text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1 text-xs font-medium">
-        <span class="material-symbols-outlined text-sm">bug_report</span>
-        <span class="hidden md:inline">테스트</span>
-      </button>
-      <span class="material-symbols-outlined text-sm">wifi</span>
-      <span id="battery-text" class="text-sm font-medium"></span>
-      <button id="btn-filter" onclick="toggleFilter()" title="필터 설정"
-        class="text-on-surface-variant hover:text-on-surface transition-colors ml-2">
-        <span class="material-symbols-outlined text-sm">settings</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- Filter Panel -->
-  <aside id="filter-panel" class="hidden">
-    <div class="flex items-center justify-between mb-6">
-      <h3 class="text-xl font-bold">App Filters</h3>
-      <button onclick="toggleFilter()" class="text-on-surface-variant hover:text-on-surface">
-        <span class="material-symbols-outlined">close</span>
-      </button>
-    </div>
-    <div id="filter-mode" class="flex flex-col gap-3 bg-white/5 p-4 rounded-2xl mb-4 border border-white/5">
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input type="radio" name="mode" value="blacklist" onchange="setFilterMode('blacklist')"
-          class="text-primary focus:ring-primary/50 bg-surface border-white/20">
-        <span class="text-sm">차단 목록 (Blacklist)</span>
-      </label>
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input type="radio" name="mode" value="whitelist" onchange="setFilterMode('whitelist')"
-          class="text-primary focus:ring-primary/50 bg-surface border-white/20">
-        <span class="text-sm">허용 목록 (Whitelist)</span>
-      </label>
-    </div>
-    <div id="filter-packages" class="flex-1 overflow-y-auto custom-scrollbar"></div>
   </aside>
 
-  <!-- Main View -->
-  <div class="relative z-10 flex-1 flex flex-col lg:flex-row w-full h-full overflow-hidden">
-    <!-- Left Pane: Notification List -->
-    <div class="w-full lg:w-[440px] flex-shrink-0 flex flex-col h-full px-6 lg:px-8 py-4">
-      <h1 class="text-3xl font-bold tracking-tight mb-6 flex-shrink-0">Stream</h1>
-      <div id="notifications" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pb-10 pr-1">
-        <div id="empty-state"
-          class="flex flex-col items-center justify-center h-full text-center text-on-surface-variant opacity-60 gap-4 mt-20">
-          <span class="material-symbols-outlined text-6xl opacity-40">phonelink_ring</span>
-          <p class="text-lg font-bold">아직 알림이 없습니다</p>
-          <p class="text-xs uppercase tracking-widest mt-2">Android 폰에서 알림이 오면 표시됩니다</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Divider -->
-    <div class="hidden lg:block w-px bg-white/10 flex-shrink-0 self-stretch"></div>
-
-    <!-- Right Pane: Notification Detail -->
-    <div class="hidden lg:flex flex-1 flex-col h-full overflow-hidden px-4 lg:px-8 py-4 min-w-0">
-      <div
-        class="glass-pane rounded-3xl border border-white/10 shadow-2xl flex flex-col h-full overflow-hidden relative">
-
-        <!-- Welcome / Empty State (Shown initially) -->
-        <div id="right-pane-empty"
-          class="absolute inset-0 flex flex-col items-center justify-center text-on-surface-variant gap-4 bg-surface-container-high/30 z-10">
-          <span class="material-symbols-outlined text-6xl opacity-20">forum</span>
-          <p class="text-sm font-medium tracking-wide uppercase opacity-50">알림을 선택하면 상세 내용이 표시됩니다</p>
-        </div>
-
-        <!-- Detail Content (Shown on click) -->
-        <div id="right-pane-content" class="flex flex-col h-full hidden overflow-hidden">
-          <!-- Message Header -->
-          <div class="px-8 py-6 border-b border-white/5 flex items-center justify-between flex-shrink-0">
-            <div class="flex items-center gap-4 overflow-hidden">
-              <div
-                class="w-14 h-14 rounded-full bg-secondary-container flex items-center justify-center shadow-lg flex-shrink-0">
-                <span class="material-symbols-outlined text-2xl text-on-secondary-container">notifications_active</span>
-              </div>
-              <div class="min-w-0 flex-1">
-                <h2 id="detail-sender" class="text-xl font-bold text-on-surface truncate"></h2>
-                <p id="detail-app" class="text-xs font-medium text-secondary uppercase tracking-widest mt-1 truncate">
-                </p>
-              </div>
-            </div>
-            <button class="p-3 rounded-full hover:bg-white/5 text-on-surface-variant transition-colors flex-shrink-0"
-              onclick="document.getElementById('right-pane-empty').classList.remove('hidden'); document.getElementById('right-pane-content').classList.add('hidden');">
-              <span class="material-symbols-outlined">close</span>
-            </button>
-          </div>
-
-          <!-- Message Content -->
-          <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-            <div class="flex flex-col gap-6">
-              <div class="flex flex-col items-start max-w-full">
-                <div
-                  class="bg-surface-container-high rounded-t-2xl rounded-br-2xl p-6 shadow-sm border border-white/5 w-full max-w-[85%]">
-                  <p id="detail-text" class="text-lg leading-relaxed text-on-surface whitespace-pre-wrap break-words">
-                  </p>
-                </div>
-                <span id="detail-time"
-                  class="text-[10px] text-on-surface-variant font-medium mt-2 ml-1 uppercase tracking-widest"></span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Reply Area -->
-          <div id="reply-area"
-            class="p-6 bg-surface-container-low/50 backdrop-blur-md border-t border-white/5 flex-shrink-0 hidden">
-            <div class="relative flex items-center gap-3">
-              <div class="flex-1 relative min-w-0">
-                <input id="reply-input"
-                  class="w-full bg-surface-container-lowest border border-white/10 rounded-full py-4 pl-6 pr-14 text-on-surface placeholder:text-on-surface-variant/50 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all font-medium"
-                  placeholder="Type your reply..." type="text" />
-                <div class="absolute right-2 top-2">
-                  <button id="btn-send" onclick="sendReply()"
-                    class="bg-gradient-to-br from-primary to-primary-container text-on-primary-container h-10 w-10 flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform disabled:opacity-50">
-                    <span class="material-symbols-outlined font-bold">send</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast -->
-  <div id="toast"></div>
+  <div id="overlay" class="overlay" hidden></div>
+  <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
 
   <script src="/app.js"></script>
 </body>
-
 </html>
